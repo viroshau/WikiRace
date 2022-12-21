@@ -2,21 +2,24 @@ from bs4 import BeautifulSoup
 import requests
 import time as time
 
-PAGENAME = 'Arfaoui'
+PAGENAME = 'Classical_Hollywood_cinema'
 WIKIBASEURL = 'https://en.wikipedia.org'
 PAGEURL = WIKIBASEURL + '/wiki/' + PAGENAME
 
 def getAllLinksOnPage(url):
     #GetRequest to the wikipedia page
     allLinksOnPage = {}
+    startTime = time.time()
     source = requests.get(url).text
+    requestTime = time.time()
 
     #Get all content on page before See Also, References and External links based on which section appears first
     seeAlsoSplit = '<span class="mw-headline" id="See_also">'
     referencesSplit = '<span class="mw-headline" id="References">'
     externalLinksSplit = '<span class="mw-headline" id="External_links">'
-
+    
     searchableText = source.split(seeAlsoSplit)[0].split(referencesSplit)[0].split(externalLinksSplit)[0]
+    textSplittingTime = time.time()
     soup = BeautifulSoup(searchableText,'lxml')
 
     # The maintext is a dic with id "mw-content-text"
@@ -24,6 +27,8 @@ def getAllLinksOnPage(url):
     for link in maintext.find_all('a'):
         if link.has_attr('href') and link['href'][0:6] == '/wiki/' and ':' not in link['href']:
             allLinksOnPage[link.text] = WIKIBASEURL + link['href']
+    afterLoopTime = time.time()
+    print(f'Timing of GET-request: {requestTime - startTime}\nTiming of textSplitting {textSplittingTime-requestTime}\nTiming of the looping: {afterLoopTime - textSplittingTime}')
     return allLinksOnPage
 
 def linksOnPageBasedOnPTagsOnly(soup):
@@ -34,3 +39,7 @@ def linksOnPageBasedOnPTagsOnly(soup):
             if anchor.has_attr('href') and anchor['href'][0:6] == '/wiki/':
                 linksOnPageInternal[anchor.text] = WIKIBASEURL + anchor['href']
     return linksOnPageInternal
+
+links = getAllLinksOnPage(PAGEURL)
+links = getAllLinksOnPage(PAGEURL)
+links = getAllLinksOnPage(PAGEURL)
