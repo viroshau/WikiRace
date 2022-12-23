@@ -21,14 +21,17 @@ def getAllLinksOnPage(url):
     searchableText = source.split(seeAlsoSplit)[0].split(referencesSplit)[0].split(externalLinksSplit)[0]
     textSplittingTime = time.time()
     soup = BeautifulSoup(searchableText,'lxml')
-
     # The maintext is a dic with id "mw-content-text"
     maintext = soup.find_all('div',id='mw-content-text')[0]
+    soupTime = time.time()
     for link in maintext.find_all('a'):
         if link.has_attr('href') and link['href'][0:6] == '/wiki/' and ':' not in link['href']:
             allLinksOnPage[link.text] = WIKIBASEURL + link['href']
     afterLoopTime = time.time()
-    print(f'Timing of GET-request: {requestTime - startTime}\nTiming of textSplitting {textSplittingTime-requestTime}\nTiming of the looping: {afterLoopTime - textSplittingTime}')
+    print(f'Timing of GET-request: {requestTime - startTime}') 
+    print(f'Timing of textSplitting {textSplittingTime-requestTime}')
+    print(f'Timing of generating soup {soupTime - textSplittingTime}')
+    print(f'Timing of the looping: {afterLoopTime - soupTime}')
     return allLinksOnPage
 
 def linksOnPageBasedOnPTagsOnly(soup):
@@ -40,6 +43,14 @@ def linksOnPageBasedOnPTagsOnly(soup):
                 linksOnPageInternal[anchor.text] = WIKIBASEURL + anchor['href']
     return linksOnPageInternal
 
-links = getAllLinksOnPage(PAGEURL)
-links = getAllLinksOnPage(PAGEURL)
-links = getAllLinksOnPage(PAGEURL)
+
+if __name__ == "__main__":
+    linksOnFirstPage = getAllLinksOnPage(PAGEURL)
+
+    """
+    startTime = time.time()
+    for key in linksOnFirstPage:
+        getAllLinksOnPage(linksOnFirstPage[key])
+    endTime = time.time()
+    print(f'The Final Count: {endTime - startTime}')
+    """
