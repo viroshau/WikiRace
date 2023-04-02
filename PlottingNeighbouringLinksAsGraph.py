@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
-from getLinksFromPageWikipedia import getAllLinksOnPage
+from getLinksFromPageWikipedia import getAllLinksOnPageInitialVersion
 
 PAGENAME = 'Alons'
 WIKIBASEURL = 'https://en.wikipedia.org'
@@ -11,7 +11,7 @@ PAGEURL = WIKIBASEURL + '/wiki/' + PAGENAME
 COLORS = ['#264653','#2a9d8f','#e9c46a','#f4a261','#e76f51']
 
 def plotAllOutGoingGraphsWithName(url):
-    linksOnFirstPage = getAllLinksOnPage(url)
+    linksOnFirstPage = getAllLinksOnPageInitialVersion(url)
     G = nx.Graph()
     colorMap = []
     colorMap.append(COLORS[0])
@@ -23,7 +23,7 @@ def plotAllOutGoingGraphsWithName(url):
 
 def plotGraphWithVaryingNodeSizes(url):
     #Use the 'Alons' pageName for a nice graphic. Does not have too many outgoing links. 
-    linksOnFirstPage = getAllLinksOnPage(url)
+    linksOnFirstPage = getAllLinksOnPageInitialVersion(url)
     G = nx.Graph()
     nodecolors = {}
     #nodecolors[PAGENAME] = COLORS[0]
@@ -31,7 +31,7 @@ def plotGraphWithVaryingNodeSizes(url):
     for link in linksOnFirstPage:
         nodecolors.setdefault(link,COLORS[1])
         G.add_edge(PAGENAME,link)
-        outgoingLinksFromThisLink = getAllLinksOnPage(linksOnFirstPage[link])
+        outgoingLinksFromThisLink = getAllLinksOnPageInitialVersion(linksOnFirstPage[link])
         for subLink in outgoingLinksFromThisLink:
             nodecolors.setdefault(subLink,COLORS[2])
             G.add_edge(link,subLink)

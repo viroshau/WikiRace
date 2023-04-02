@@ -1,27 +1,25 @@
 import asyncio
+import time 
 import aiohttp
-import time
+from aiohttp.client import ClientSession
 
-PAGENAME = 'Classical_Hollywood_cinema'
-WIKIBASEURL = 'https://en.wikipedia.org'
-PAGEURL = WIKIBASEURL + '/wiki/' + PAGENAME
-
-urls = [PAGEURL]*300
-
-async def processForLink(session, url):
+async def download_link(url:str,session:ClientSession):
     async with session.get(url) as response:
-         return response.text
+        result = await response.text()
+        print(f'Read {len(result)} from {url}')
 
-async def main():
-    async with aiohttp.ClientSession() as session:
+async def download_all(urls:list):
+    my_conn = aiohttp.TCPConnector(limit=10)
+    async with aiohttp.ClientSession(connector=my_conn) as session:
         tasks = []
         for url in urls:
-            task = asyncio.ensure_future(processForLink(session, url))
+            task = asyncio.ensure_future(download_link(url=url,session=session))
             tasks.append(task)
-        results = await asyncio.gather(*tasks)
+        await asyncio.gather(*tasks,return_exceptions=True) # the await must be nest inside of the session
 
-time1 = time.time()
-asyncio.run(main())
-tome2 = time.time()
-
-print(f'This took {tome2 - time1} amount of seconds')
+url_list = ["https://www.google.com", "https://www.bing.com"] * 50
+print(url_list)
+start = time.time()
+asyncio.run(download_all(url_list))
+end = time.time()
+print(f'download {len(url_list)} links in {end - start} seconds')
