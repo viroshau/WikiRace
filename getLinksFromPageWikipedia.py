@@ -4,6 +4,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 import requests
 import time as time
+import cchardet as chardet
 from dataclasses import dataclass
 from queue import Queue, LifoQueue
 from typing import List
@@ -110,9 +111,13 @@ def entireProcedure(PAGENAME, PAGEURL, Page):
             break
     return found, foundPage
 
+
+
+async def main(pages, queue):
+    for page in pages: 
+        await queue.put(page)
+
 if __name__ == "__main__":
     startpage = Page(PAGENAME, PAGEURL, None, history=[PAGENAME])
-    pages = getAllLinksOnPageAsDataClasses(startpage)
-    queue = asyncio.Queue()
-    asyncio.run(main(pages, queue))
-    print(len(queue._queue))
+    f,c = entireProcedure(PAGENAME, PAGEURL, startpage)
+    print(f,c)

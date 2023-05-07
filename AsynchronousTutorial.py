@@ -1,25 +1,33 @@
 import asyncio
-import time 
+import bs4 as beautifulsoup
 import aiohttp
-from aiohttp.client import ClientSession
 
-async def download_link(url:str,session:ClientSession):
-    async with session.get(url) as response:
-        result = await response.text()
-        print(f'Read {len(result)} from {url}')
+async def producer(queue):
+    while True:
+        await queue.put("https://www.google.com")
+        await asyncio.sleep(1)
 
-async def download_all(urls:list):
-    my_conn = aiohttp.TCPConnector(limit=10)
-    async with aiohttp.ClientSession(connector=my_conn) as session:
-        tasks = []
-        for url in urls:
-            task = asyncio.ensure_future(download_link(url=url,session=session))
-            tasks.append(task)
-        await asyncio.gather(*tasks,return_exceptions=True) # the await must be nest inside of the session
+async def consumer(queue):
+    while True:
+        url = await queue.get()
+        print('Start fetching: ' + url)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                content = await response.read()
+                try:
+                    soup = beautifulsoup.BeautifulSoup(content, "html.parser")
+                    print(str(soup))
+                except Exception as e:
+                    print(f"Error fetching {url}: {e}")
+                queue.task_done()
 
-url_list = ["https://www.google.com", "https://www.bing.com"] * 50
-print(url_list)
-start = time.time()
-asyncio.run(download_all(url_list))
-end = time.time()
-print(f'download {len(url_list)} links in {end - start} seconds')
+def main():
+    queue = asyncio.Queue()
+    loop = asyncio.get_event_loop()
+
+    loop.create_task(producer(queue))
+    loop.create_task(consumer(queue))
+    loop.run_forever()
+
+if __name__ == '__main__':
+    main()
