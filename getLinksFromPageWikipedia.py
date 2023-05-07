@@ -12,7 +12,7 @@ from typing import List
 PAGENAME = 'MissingNo.'
 WIKIBASEURL = 'https://en.wikipedia.org'
 PAGEURL = WIKIBASEURL + '/wiki/' + PAGENAME
-GOALPAGE = "Japanese people"
+GOALPAGE = "Pokémon (TV series)"
 
 @dataclass
 class Page:
@@ -56,19 +56,19 @@ def getALlLinksOnPage(fromPage, source):
     maintext = soup.find_all('div',id='mw-content-text')[0]
     for link in maintext.find_all('a'):
         if link.has_attr('href') and link['href'][0:6] == '/wiki/' and ':' not in link['href']:
-            allLinksOnPage.append(Page(title = link.text, 
-                                              link = WIKIBASEURL + link['href'], 
-                                              parent = fromPage.title, 
-                                              history= fromPage.history + [link.text]))
+            allLinksOnPage.append(
+                Page(
+                    title = link.text, 
+                    link = WIKIBASEURL + link['href'], 
+                    parent = fromPage.title, 
+                    history= fromPage.history + [link.text])
+                )
     return allLinksOnPage
 
 def getAllLinksOnPageAsDataClasses(fromPage: Page):
     #GetRequest to the wikipedia page
     source = requests.get(fromPage.link).text
     return getALlLinksOnPage(fromPage, source)
-
-async def asyncVersionOfGetAllLinks(fromPage: Page):
-    return await asyncio.to_thread(getAllLinksOnPageAsDataClasses, fromPage)
 
 def removeSeeAlsoAndReferences(source):
     seeAlsoSplit = '<span class="mw-headline" id="See_also">'
@@ -77,9 +77,6 @@ def removeSeeAlsoAndReferences(source):
     
     searchableText = source.split(seeAlsoSplit)[0].split(referencesSplit)[0].split(externalLinksSplit)[0]
     return searchableText
-
-async def asyncrunning(pages):
-    return await asyncio.gather(*[asyncVersionOfGetAllLinks(page) for page in pages])
 
 def processForASingleElement(queueOfPages, visitedPages, found, foundPage):
     currentPage = queueOfPages.get() # Deques the first element in the queue. 
@@ -96,7 +93,7 @@ def processForASingleElement(queueOfPages, visitedPages, found, foundPage):
     return found, foundPage
 
 
-def entireProcedure(PAGENAME, PAGEURL, Page):
+def entireProcedureSynchronous(PAGENAME, PAGEURL):
     startpage = Page(PAGENAME, PAGEURL, None, history=[PAGENAME])
     
     queueOfPages = Queue()
@@ -111,13 +108,41 @@ def entireProcedure(PAGENAME, PAGEURL, Page):
             break
     return found, foundPage
 
+async def getAllLinksOnPageAsDataClassesAsyncVersion(fromPage: Page, session: aiohttp.ClientSession):
+    #GetRequest to the wikipedia page
+    async with session.get(fromPage.link) as response:
+        source = await response.text()
+        return getALlLinksOnPage(fromPage, source)
 
+async def consumer(queue: asyncio.Queue):
+    async with aiohttp.ClientSession() as session:
+        while True:
+            page: Page = await queue.get()
+            #print(page)
 
-async def main(pages, queue):
-    for page in pages: 
-        await queue.put(page)
+            async with session.get(page.link) as response:
+                source = await response.text()
+            allLinksOnPage: List[Page] = getALlLinksOnPage(page, source)
+
+            for subPage in allLinksOnPage:
+                if subPage.title == GOALPAGE:
+                    print(f"Completed! We found the page: {subPage.history}")
+                    return
+                asyncio.create_task(queue.put(subPage)) # a; It creates a task that will be executed in the future. It is a way to run a function in the background, without blocking the main thread.
 
 if __name__ == "__main__":
-    startpage = Page(PAGENAME, PAGEURL, None, history=[PAGENAME])
-    f,c = entireProcedure(PAGENAME, PAGEURL, startpage)
-    print(f,c)
+    startPage = Page(PAGENAME, PAGEURL, None, history=[PAGENAME])
+
+    startTime = time.time()
+    queue = asyncio.Queue()
+    queue.put_nowait(startPage)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(consumer(queue))
+    loop.close()
+    endTime = time.time()
+    print(f'The time it took to run the entire async procedure was: {endTime - startTime}')
+
+    #found, foundPage = entireProcedureSynchronous(PAGENAME, PAGEURL)
+    #endTime2 = time.time()
+    #print(f'The time it took to run the entire synchronous procedure was: {endTime2 - endTime}')
+    

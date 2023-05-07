@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
-from getLinksFromPageWikipedia import getAllLinksOnPageInitialVersion
+from getLinksFromPageWikipedia import Page, getAllLinksOnPageInitialVersion
 
 PAGENAME = 'Alons'
 WIKIBASEURL = 'https://en.wikipedia.org'
@@ -11,6 +11,7 @@ PAGEURL = WIKIBASEURL + '/wiki/' + PAGENAME
 COLORS = ['#264653','#2a9d8f','#e9c46a','#f4a261','#e76f51']
 
 def plotAllOutGoingGraphsWithName(url):
+    startPage = Page(PAGENAME, PAGEURL, None, history=[PAGENAME])
     linksOnFirstPage = getAllLinksOnPageInitialVersion(url)
     G = nx.Graph()
     colorMap = []
