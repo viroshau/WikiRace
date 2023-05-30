@@ -114,12 +114,16 @@ async def getAllLinksOnPageAsDataClassesAsyncVersion(fromPage: Page, session: ai
         source = await response.text()
         return getALlLinksOnPage(fromPage, source)
 
-async def consumer(queue: asyncio.Queue):
+async def consumer(queue: asyncio.Queue,
+                   visitedPages: set):
     async with aiohttp.ClientSession() as session:
         while True:
+            #TODO: Add a check for if we have visited the page before
+            
             page: Page = await queue.get()
-            #print(page)
-
+            if page.title in visitedPages:
+                continue
+            visitedPages.add(page.title)
             async with session.get(page.link) as response:
                 source = await response.text()
             allLinksOnPage: List[Page] = getALlLinksOnPage(page, source)
@@ -127,22 +131,30 @@ async def consumer(queue: asyncio.Queue):
             for subPage in allLinksOnPage:
                 if subPage.title == GOALPAGE:
                     print(f"Completed! We found the page: {subPage.history}")
-                    return
+                    raise (Exception("We found the page!"))
                 asyncio.create_task(queue.put(subPage)) # a; It creates a task that will be executed in the future. It is a way to run a function in the background, without blocking the main thread.
 
-if __name__ == "__main__":
+async def main():
     startPage = Page(PAGENAME, PAGEURL, None, history=[PAGENAME])
 
     startTime = time.time()
     queue = asyncio.Queue()
     queue.put_nowait(startPage)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(consumer(queue))
-    loop.close()
+    #loop.run_until_complete(consumer(queue))
+    visitedPages = set()
+    futures = [asyncio.ensure_future(consumer(queue, visitedPages), loop=loop) for i in range(2)] # q: Why do we need to create 10 futures? a: Because we want to run 10 consumers in parallell.
+    try:
+        await asyncio.gather(*futures)
+    except Exception as e:
+        for t in futures:
+            t.cancel()
+    #loop.run_until_complete(asyncio.gather(*futures))
+    #loop.close()
     endTime = time.time()
     print(f'The time it took to run the entire async procedure was: {endTime - startTime}')
 
-    #found, foundPage = entireProcedureSynchronous(PAGENAME, PAGEURL)
-    #endTime2 = time.time()
-    #print(f'The time it took to run the entire synchronous procedure was: {endTime2 - endTime}')
+
+if __name__ == "__main__":
+    asyncio.run(main())
     
